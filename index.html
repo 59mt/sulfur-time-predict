@@ -4,293 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>硫容时耗预测 · 拟合散点</title>
-    <!-- Chart.js 使用国内镜像 staticfile -->
-    <script src="https://cdn.staticfile.org/Chart.js/4.4.0/chart.umd.min.js"></script>
-    <!-- SheetJS 使用国内镜像 staticfile -->
-    <script src="https://cdn.staticfile.org/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-            background: #f5f9fe;
-            padding: 30px 20px;
-            color: #1a2639;
-        }
-        .container {
-            max-width: 1300px;
-            margin: 0 auto;
-        }
-        .card {
-            background: white;
-            border-radius: 24px;
-            padding: 24px 28px;
-            box-shadow: 0 10px 30px rgba(0,20,40,0.06);
-            margin-bottom: 28px;
-            border: 1px solid #e9f0f9;
-            transition: box-shadow 0.2s;
-        }
-        .card:hover {
-            box-shadow: 0 14px 40px rgba(0,20,40,0.10);
-        }
-        h2 {
-            font-weight: 600;
-            font-size: 1.5rem;
-            letter-spacing: -0.3px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 18px;
-            color: #0b2b4a;
-        }
-        h2 small {
-            font-size: 0.9rem;
-            font-weight: 400;
-            color: #4c6a8a;
-            margin-left: 8px;
-        }
-        .sub-muted {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #4c6a8a;
-        }
-        .chart-title-muted {
-            font-size: 0.8rem;
-            font-weight: 400;
-            color: #4c6a8a;
-        }
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            align-items: stretch;
-        }
-        .col {
-            flex: 1 1 300px;
-            display: flex;
-        }
-        .col .card {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        .file-zone {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 18px 25px;
-            background: #f0f6ff;
-            padding: 18px 22px;
-            border-radius: 48px;
-            border: 1px dashed #a0c0e0;
-        }
-        .file-label {
-            background: #1d3b61;
-            color: white;
-            padding: 10px 22px;
-            border-radius: 40px;
-            font-weight: 500;
-            font-size: 0.95rem;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: 0.15s;
-            border: none;
-        }
-        .file-label:hover {
-            background: #143049;
-            transform: scale(1.02);
-        }
-        .file-label input {
-            display: none;
-        }
-        #file-status {
-            color: #1a4b77;
-            font-weight: 450;
-        }
-        .btn {
-            background: #1d3b61;
-            border: none;
-            color: white;
-            padding: 10px 32px;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: 0.15s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 10px rgba(26, 67, 113, 0.15);
-        }
-        .btn:active {
-            transform: scale(0.96);
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            pointer-events: none;
-            filter: grayscale(0.5);
-        }
-        .btn-success {
-            background: #0f7b4b;
-        }
-        .btn-success:hover {
-            background: #0a5f3a;
-        }
-        .btn-outline {
-            background: transparent;
-            border: 1.5px solid #1d3b61;
-            color: #1d3b61;
-            box-shadow: none;
-        }
-        .btn-outline:hover {
-            background: #eef4fc;
-        }
-        .grid-7 {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
-            gap: 16px 20px;
-            background: #f8fcff;
-            padding: 18px 20px;
-            border-radius: 20px;
-            border: 1px solid #e2edf7;
-        }
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .input-group label {
-            font-weight: 500;
-            font-size: 0.82rem;
-            color: #2d4a6e;
-            letter-spacing: 0.3px;
-        }
-        .input-group input {
-            padding: 8px 12px;
-            border: 1px solid #cdddee;
-            border-radius: 14px;
-            font-size: 0.95rem;
-            background: white;
-            transition: 0.1s;
-            width: 100%;
-        }
-        .input-group input:focus {
-            border-color: #1d3b61;
-            outline: 2px solid #b3cef0;
-        }
-        .ratio-action-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            gap: 16px 20px;
-            background: #f8fcff;
-            padding: 18px 20px;
-            border-radius: 20px;
-            border: 1px solid #e2edf7;
-            margin-top: 16px;
-        }
-        .ratio-action-row .input-group {
-            flex: 0 0 150px;
-        }
-        .ratio-action-row .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            flex: 1;
-            align-items: flex-end;
-        }
-        .result-box {
-            background: #e3effa;
-            border-radius: 20px;
-            padding: 18px 24px;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-top: 16px;
-        }
-        .result-number {
-            font-size: 2.4rem;
-            font-weight: 700;
-            color: #0b2b4a;
-            letter-spacing: -0.5px;
-        }
-        .result-number small {
-            font-size: 1.2rem;
-            font-weight: 400;
-            color: #32567a;
-            margin-left: 6px;
-        }
-        .metric-badge {
-            background: white;
-            padding: 6px 20px;
-            border-radius: 40px;
-            font-weight: 500;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-            font-size: 0.95rem;
-        }
-        .chart-container {
-            position: relative;
-            height: 280px;
-            margin-top: 12px;
-        }
-        .flex-between {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: #f5f9fe; padding: 30px 20px; color: #1a2639; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        .card { background: white; border-radius: 24px; padding: 24px 28px; box-shadow: 0 10px 30px rgba(0,20,40,0.06); margin-bottom: 28px; border: 1px solid #e9f0f9; transition: box-shadow 0.2s; }
+        .card:hover { box-shadow: 0 14px 40px rgba(0,20,40,0.10); }
+        h2 { font-weight: 600; font-size: 1.5rem; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; margin-bottom: 18px; color: #0b2b4a; }
+        h2 small { font-size: 0.9rem; font-weight: 400; color: #4c6a8a; margin-left: 8px; }
+        .sub-muted { font-size: 0.95rem; font-weight: 600; color: #4c6a8a; }
+        .chart-title-muted { font-size: 0.8rem; font-weight: 400; color: #4c6a8a; }
+        .row { display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch; }
+        .col { flex: 1 1 300px; display: flex; }
+        .col .card { flex: 1; display: flex; flex-direction: column; }
+        .file-zone { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 25px; background: #f0f6ff; padding: 18px 22px; border-radius: 48px; border: 1px dashed #a0c0e0; }
+        .file-label { background: #1d3b61; color: white; padding: 10px 22px; border-radius: 40px; font-weight: 500; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.15s; border: none; }
+        .file-label:hover { background: #143049; transform: scale(1.02); }
+        .file-label input { display: none; }
+        #file-status { color: #1a4b77; font-weight: 450; }
+        .btn { background: #1d3b61; border: none; color: white; padding: 10px 32px; border-radius: 40px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(26, 67, 113, 0.15); }
+        .btn:active { transform: scale(0.96); }
+        .btn:disabled { opacity: 0.5; pointer-events: none; filter: grayscale(0.5); }
+        .btn-success { background: #0f7b4b; }
+        .btn-success:hover { background: #0a5f3a; }
+        .btn-outline { background: transparent; border: 1.5px solid #1d3b61; color: #1d3b61; box-shadow: none; }
+        .btn-outline:hover { background: #eef4fc; }
+        .grid-7 { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 16px 20px; background: #f8fcff; padding: 18px 20px; border-radius: 20px; border: 1px solid #e2edf7; }
+        .input-group { display: flex; flex-direction: column; gap: 4px; }
+        .input-group label { font-weight: 500; font-size: 0.82rem; color: #2d4a6e; letter-spacing: 0.3px; }
+        .input-group input { padding: 8px 12px; border: 1px solid #cdddee; border-radius: 14px; font-size: 0.95rem; background: white; transition: 0.1s; width: 100%; }
+        .input-group input:focus { border-color: #1d3b61; outline: 2px solid #b3cef0; }
+        .ratio-action-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 20px; background: #f8fcff; padding: 18px 20px; border-radius: 20px; border: 1px solid #e2edf7; margin-top: 16px; }
+        .ratio-action-row .input-group { flex: 0 0 150px; }
+        .ratio-action-row .btn-group { display: flex; flex-wrap: wrap; gap: 12px; flex: 1; align-items: flex-end; }
+        .result-box { background: #e3effa; border-radius: 20px; padding: 18px 24px; display: flex; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+        .result-number { font-size: 2.4rem; font-weight: 700; color: #0b2b4a; letter-spacing: -0.5px; }
+        .result-number small { font-size: 1.2rem; font-weight: 400; color: #32567a; margin-left: 6px; }
+        .metric-badge { background: white; padding: 6px 20px; border-radius: 40px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.02); font-size: 0.95rem; }
+        .chart-container { position: relative; height: 280px; margin-top: 12px; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         .mt-2 { margin-top: 16px; }
         .mb-1 { margin-bottom: 8px; }
         .op-6 { opacity: 0.7; }
         .text-muted { color: #3f5d7c; }
-        .tag {
-            background: #c4d9f0;
-            padding: 4px 14px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        .eval-metrics {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-top: 12px;
-        }
-        .card-content {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-        .chart-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            margin-top: 16px;
-        }
-        .chart-wrapper .chart-container {
-            flex: 1;
-            min-height: 220px;
-        }
-        .left-card-content {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-        .left-card-content .grid-7 {
-            flex-shrink: 0;
-        }
-        .left-card-content .ratio-action-row {
-            flex-shrink: 0;
-        }
-        .left-card-content .result-box {
-            margin-top: auto;
-            flex-shrink: 0;
-        }
+        .tag { background: #c4d9f0; padding: 4px 14px; border-radius: 30px; font-size: 0.8rem; font-weight: 500; }
+        .eval-metrics { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+        .card-content { display: flex; flex-direction: column; flex: 1; }
+        .chart-wrapper { flex: 1; display: flex; flex-direction: column; margin-top: 16px; }
+        .chart-wrapper .chart-container { flex: 1; min-height: 220px; }
+        .left-card-content { display: flex; flex-direction: column; flex: 1; }
+        .left-card-content .grid-7 { flex-shrink: 0; }
+        .left-card-content .ratio-action-row { flex-shrink: 0; }
+        .left-card-content .result-box { margin-top: auto; flex-shrink: 0; }
+        /* 加载提示覆盖层 */
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-size: 1.2rem; color: #1a2639; }
+        #loading-overlay .spinner { width: 48px; height: 48px; border: 4px solid #e0e8f0; border-top-color: #1d3b61; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loading-overlay .status-text { color: #4c6a8a; font-size: 0.95rem; margin-top: 8px; }
+        #loading-overlay .error-text { color: #c0392b; font-size: 0.95rem; margin-top: 8px; display: none; }
         @media (max-width: 700px) {
             .card { padding: 18px; }
             .file-zone { flex-direction: column; align-items: stretch; border-radius: 28px; }
@@ -301,14 +72,26 @@
             .col { flex: 1 1 100%; }
             .chart-container { height: 240px; }
         }
+        /* 隐藏主体直到库加载完成 */
+        #app-content { display: none; }
+        #app-content.ready { display: block; }
     </style>
 </head>
 <body>
+
+<!-- 加载覆盖层 -->
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <div>⏳ 加载依赖库中...</div>
+    <div class="status-text" id="loadStatus">正在尝试连接 CDN...</div>
+    <div class="error-text" id="loadError">⚠️ 所有 CDN 均无法连接，请检查网络或联系管理员</div>
+</div>
+
+<div id="app-content">
 <div class="container">
     <h1 style="font-weight:600; font-size:2rem; margin-bottom:8px;">⏱️ 硫容时耗预测</h1>
     <p style="color:#3e5f81; margin-bottom:32px;">上传 Excel 数据 → 训练模型 → 输入参数 → 预测时耗 + 拟合散点图</p>
 
-    <!-- 卡片：数据上传 + 训练 -->
     <div class="card">
         <h2>📁 数据 <small>支持 .xlsx / .xls</small></h2>
         <div class="file-zone">
@@ -328,7 +111,6 @@
     </div>
 
     <div class="row">
-        <!-- 左：输入特征 -->
         <div class="col" style="flex:1.2;">
             <div class="card">
                 <div class="left-card-content">
@@ -363,7 +145,6 @@
             </div>
         </div>
 
-        <!-- 右：模型评估 · 拟合散点图（理想线 + 实测/预测） -->
         <div class="col" style="flex:1;">
             <div class="card">
                 <div class="card-content">
@@ -389,9 +170,152 @@
         </div>
     </div>
 </div>
+</div>
 
 <script>
-    (function(){
+    // ============================================================
+    // 多 CDN 自动加载器 —— 尝试多个源，哪个能用用哪个
+    // ============================================================
+    (function loadLibraries() {
+        const overlay = document.getElementById('loading-overlay');
+        const statusText = document.getElementById('loadStatus');
+        const errorText = document.getElementById('loadError');
+        const appContent = document.getElementById('app-content');
+
+        // CDN 列表（按优先级排序，国内优先）
+        const CDN_LIST = [
+            // 国内镜像（优先）
+            { name: 'staticfile (国内)', chart: 'https://cdn.staticfile.org/Chart.js/4.4.0/chart.umd.min.js', xlsx: 'https://cdn.staticfile.org/xlsx/0.18.5/xlsx.full.min.js' },
+            { name: 'bootcdn (国内)', chart: 'https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js', xlsx: 'https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' },
+            // 国际 CDN（备选）
+            { name: 'cdnjs (国际)', chart: 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js', xlsx: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' },
+            { name: 'jsdelivr (国际)', chart: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', xlsx: 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js' },
+            { name: 'unpkg (国际)', chart: 'https://unpkg.com/chart.js@4.4.0/dist/chart.umd.min.js', xlsx: 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js' },
+        ];
+
+        let currentIndex = 0;
+        let chartLoaded = false;
+        let xlsxLoaded = false;
+        let allLoaded = false;
+
+        function checkAllLoaded() {
+            if (chartLoaded && xlsxLoaded && !allLoaded) {
+                allLoaded = true;
+                // 隐藏加载层，显示内容
+                overlay.style.display = 'none';
+                appContent.classList.add('ready');
+                console.log('✅ 所有库加载完成！');
+                // 触发页面初始化
+                if (typeof initApp === 'function') initApp();
+            }
+        }
+
+        function tryNextCDN() {
+            if (currentIndex >= CDN_LIST.length) {
+                // 所有 CDN 都失败了
+                statusText.textContent = '❌ 所有 CDN 均无法连接';
+                errorText.style.display = 'block';
+                document.querySelector('.spinner').style.display = 'none';
+                return;
+            }
+
+            const cdn = CDN_LIST[currentIndex];
+            statusText.textContent = `🔄 尝试 ${cdn.name} ...`;
+            console.log(`尝试 CDN: ${cdn.name}`);
+
+            let chartDone = false;
+            let xlsxDone = false;
+            let hasError = false;
+
+            function onError(libName) {
+                if (hasError) return;
+                hasError = true;
+                console.warn(`❌ ${cdn.name} 加载失败 (${libName})`);
+                currentIndex++;
+                tryNextCDN();
+            }
+
+            function onChartLoad() {
+                if (chartDone) return;
+                chartDone = true;
+                chartLoaded = true;
+                console.log(`✅ Chart.js 从 ${cdn.name} 加载成功`);
+                if (xlsxDone) {
+                    checkAllLoaded();
+                }
+            }
+
+            function onXlsxLoad() {
+                if (xlsxDone) return;
+                xlsxDone = true;
+                xlsxLoaded = true;
+                console.log(`✅ SheetJS 从 ${cdn.name} 加载成功`);
+                if (chartDone) {
+                    checkAllLoaded();
+                }
+            }
+
+            // 加载 Chart.js
+            const chartScript = document.createElement('script');
+            chartScript.src = cdn.chart;
+            chartScript.onload = onChartLoad;
+            chartScript.onerror = function() {
+                if (chartDone) return;
+                chartDone = true;
+                // 不立即报错，等 xlsx 也失败再跳转
+                if (xlsxDone) {
+                    onError('Chart.js');
+                } else {
+                    // 标记 chart 失败，但等 xlsx 结果
+                    setTimeout(() => {
+                        if (!chartLoaded) onError('Chart.js');
+                    }, 3000);
+                }
+            };
+            document.head.appendChild(chartScript);
+
+            // 加载 SheetJS
+            const xlsxScript = document.createElement('script');
+            xlsxScript.src = cdn.xlsx;
+            xlsxScript.onload = onXlsxLoad;
+            xlsxScript.onerror = function() {
+                if (xlsxDone) return;
+                xlsxDone = true;
+                if (chartDone) {
+                    onError('SheetJS');
+                } else {
+                    setTimeout(() => {
+                        if (!xlsxLoaded) onError('SheetJS');
+                    }, 3000);
+                }
+            };
+            document.head.appendChild(xlsxScript);
+
+            // 超时保护：10秒后如果还没加载完，尝试下一个 CDN
+            setTimeout(() => {
+                if (!chartLoaded || !xlsxLoaded) {
+                    if (!hasError) {
+                        hasError = true;
+                        console.warn(`⏰ ${cdn.name} 加载超时`);
+                        currentIndex++;
+                        tryNextCDN();
+                    }
+                }
+            }, 10000);
+        }
+
+        // 开始尝试第一个 CDN
+        tryNextCDN();
+    })();
+</script>
+
+<script>
+    // ============================================================
+    // 应用主逻辑（在库加载完成后执行）
+    // ============================================================
+    function initApp() {
+        console.log('🚀 应用初始化...');
+
         let rawData = [];
         let trainedModel = null;
         let chartInstance = null;
@@ -569,7 +493,6 @@
             }
             const preds = model.looPred;
             const actuals = model.y;
-            // 理想拟合线从 100 到 300（横坐标范围）
             const lineData = [ { x: 100, y: 100 }, { x: 300, y: 300 } ];
 
             if (chartInstance) {
@@ -750,72 +673,3 @@
                 parseFloat(inp_2_10.value) || 0,
                 parseFloat(inp_10_20.value) || 0,
                 parseFloat(inp_20_50.value) || 0,
-                parseFloat(inp_gt50.value) || 0,
-                parseFloat(inp_c.value) || 0,
-                parseFloat(inp_ratio.value) || 0
-            ];
-            const pred = predictSample(trainedModel, features);
-            if (pred === null || isNaN(pred)) {
-                predictionDisplay.innerHTML = '— <small>kg</small>';
-                return;
-            }
-            predictionDisplay.innerHTML = `${pred.toFixed(2)} <small>kg</small>`;
-        }
-
-        function resetInputs() {
-            inp_bet.value = '30.0';
-            inp_2_10.value = '0.040';
-            inp_10_20.value = '0.032';
-            inp_20_50.value = '0.030';
-            inp_gt50.value = '0.070';
-            inp_c.value = '55';
-            inp_ratio.value = '0.42';
-            if (trainedModel) doPredict();
-        }
-
-        fileInput.addEventListener('change', function(e) {
-            if (this.files.length > 0) {
-                fileStatus.textContent = `📎 ${this.files[0].name}`;
-            } else {
-                fileStatus.textContent = '未选择文件';
-            }
-        });
-
-        trainBtn.addEventListener('click', handleTrain);
-        predictBtn.addEventListener('click', doPredict);
-        resetBtn.addEventListener('click', resetInputs);
-
-        // 双击标题加载内置示例 (9条数据)
-        document.querySelector('h1').addEventListener('dblclick', function() {
-            const demoData = [
-                { bet:29.275, '2-10':0.04187, '10-20':0.03471, '20-50':0.03520, '>50':0.07354, 'c值':56, '比重':0.43, '时耗':189 },
-                { bet:36.604, '2-10':0.05546, '10-20':0.03885, '20-50':0.03362, '>50':0.08193, 'c值':59, '比重':0.39, '时耗':194 },
-                { bet:26.5, '2-10':0.04141, '10-20':0.02936, '20-50':0.02595, '>50':0.07345, 'c值':59, '比重':0.38, '时耗':171 },
-                { bet:24.861, '2-10':0.03164, '10-20':0.03084, '20-50':0.04154, '>50':0.07419, 'c值':54, '比重':0.39, '时耗':227 },
-                { bet:26.561, '2-10':0.03329, '10-20':0.03035, '20-50':0.03084, '>50':0.07847, 'c值':61, '比重':0.463, '时耗':260 },
-                { bet:26.368, '2-10':0.03839, '10-20':0.02685, '20-50':0.02216, '>50':0.05864, 'c值':78, '比重':0.47, '时耗':223 },
-                { bet:27.087, '2-10':0.03866, '10-20':0.0268, '20-50':0.0258, '>50':0.05088, 'c值':60, '比重':0.415, '时耗':218 },
-                { bet:35.648, '2-10':0.04809, '10-20':0.03941, '20-50':0.03616, '>50':0.05449, 'c值':80, '比重':0.364, '时耗':208 },
-                { bet:47.098, '2-10':0.06233, '10-20':0.04868, '20-50':0.04382, '>50':0.07748, 'c值':37, '比重':0.33, '时耗':140 }
-            ];
-            rawData = demoData;
-            sampleCountTag.textContent = `样本: ${demoData.length}`;
-            fileStatus.textContent = '📋 内置示例数据 (9条)';
-            const model = trainModel(demoData);
-            if (!model.error) {
-                trainedModel = model;
-                updateMetrics(model);
-                updateChart(model);
-                trainStatus.textContent = '✅ 内置数据训练完成';
-                doPredict();
-            } else {
-                alert('内置数据训练失败');
-            }
-        });
-        console.log('💡 双击标题 "硫容时耗预测" 可加载内置示例数据');
-
-        predictionDisplay.innerHTML = '— <small>kg</small>';
-    })();
-</script>
-</body>
-</html>
