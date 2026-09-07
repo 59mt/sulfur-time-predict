@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>硫容时耗预测 · 拟合散点</title>
+    <!-- Chart.js 轻量图表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS 解析 Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: #f5f9fe;
+            padding: 30px 20px;
+            color: #1a2639;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px 28px;
+            box-shadow: 0 10px 30px rgba(0,20,40,0.06);
+            margin-bottom: 28px;
+            border: 1px solid #e9f0f9;
+            transition: box-shadow 0.2s;
+        }
+        .card:hover {
+            box-shadow: 0 14px 40px rgba(0,20,40,0.10);
+        }
+        h2 {
+            font-weight: 600;
+            font-size: 1.5rem;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 18px;
+            color: #0b2b4a;
+        }
+        h2 small {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #4c6a8a;
+            margin-left: 8px;
+        }
+        .sub-muted {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #4c6a8a;
+        }
+        .chart-title-muted {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #4c6a8a;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            align-items: stretch;
+        }
+        .col {
+            flex: 1 1 300px;
+            display: flex;
+        }
+        .col .card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .file-zone {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 18px 25px;
+            background: #f0f6ff;
+            padding: 18px 22px;
+            border-radius: 48px;
+            border: 1px dashed #a0c0e0;
+        }
+        .file-label {
+            background: #1d3b61;
+            color: white;
+            padding: 10px 22px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.15s;
+            border: none;
+        }
+        .file-label:hover {
+            background: #143049;
+            transform: scale(1.02);
+        }
+        .file-label input {
+            display: none;
+        }
+        #file-status {
+            color: #1a4b77;
+            font-weight: 450;
+        }
+        .btn {
+            background: #1d3b61;
+            border: none;
+            color: white;
+            padding: 10px 32px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(26, 67, 113, 0.15);
+        }
+        .btn:active {
+            transform: scale(0.96);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(0.5);
+        }
+        .btn-success {
+            background: #0f7b4b;
+        }
+        .btn-success:hover {
+            background: #0a5f3a;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid #1d3b61;
+            color: #1d3b61;
+            box-shadow: none;
+        }
+        .btn-outline:hover {
+            background: #eef4fc;
+        }
+        .grid-7 {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+            gap: 16px 20px;
+            background: #f8fcff;
+            padding: 18px 20px;
+            border-radius: 20px;
+            border: 1px solid #e2edf7;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .input-group label {
+            font-weight: 500;
+            font-size: 0.82rem;
+            color: #2d4a6e;
+            letter-spacing: 0.3px;
+        }
+        .input-group input {
+            padding: 8px 12px;
+            border: 1px solid #cdddee;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            background: white;
+            transition: 0.1s;
+            width: 100%;
+        }
+        .input-group input:focus {
+            border-color: #1d3b61;
+            outline: 2px solid #b3cef0;
+        }
+        .ratio-action-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 16px 20px;
+            background: #f8fcff;
+            padding: 18px 20px;
+            border-radius: 20px;
+            border: 1px solid #e2edf7;
+            margin-top: 16px;
+        }
+        .ratio-action-row .input-group {
+            flex: 0 0 150px;
+        }
+        .ratio-action-row .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            flex: 1;
+            align-items: flex-end;
+        }
+        .result-box {
+            background: #e3effa;
+            border-radius: 20px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        .result-number {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #0b2b4a;
+            letter-spacing: -0.5px;
+        }
+        .result-number small {
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #32567a;
+            margin-left: 6px;
+        }
+        .metric-badge {
+            background: white;
+            padding: 6px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            font-size: 0.95rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 280px;
+            margin-top: 12px;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .mt-2 { margin-top: 16px; }
+        .mb-1 { margin-bottom: 8px; }
+        .op-6 { opacity: 0.7; }
+        .text-muted { color: #3f5d7c; }
+        .tag {
+            background: #c4d9f0;
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .eval-metrics {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .chart-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-top: 16px;
+        }
+        .chart-wrapper .chart-container {
+            flex: 1;
+            min-height: 220px;
+        }
+        .left-card-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .left-card-content .grid-7 {
+            flex-shrink: 0;
+        }
+        .left-card-content .ratio-action-row {
+            flex-shrink: 0;
+        }
+        .left-card-content .result-box {
+            margin-top: auto;
+            flex-shrink: 0;
+        }
+        @media (max-width: 700px) {
+            .card { padding: 18px; }
+            .file-zone { flex-direction: column; align-items: stretch; border-radius: 28px; }
+            .result-number { font-size: 2rem; }
+            .ratio-action-row { flex-direction: column; align-items: stretch; }
+            .ratio-action-row .input-group { flex: 1; }
+            .ratio-action-row .btn-group { justify-content: flex-start; }
+            .col { flex: 1 1 100%; }
+            .chart-container { height: 240px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 style="font-weight:600; font-size:2rem; margin-bottom:8px;">⏱️ 硫容时耗预测</h1>
+    <p style="color:#3e5f81; margin-bottom:32px;">上传 Excel 数据 → 训练模型 → 输入参数 → 预测时耗 + 拟合散点图</p>
+
+    <!-- 卡片：数据上传 + 训练 -->
+    <div class="card">
+        <h2>📁 数据 <small>支持 .xlsx / .xls</small></h2>
+        <div class="file-zone">
+            <label class="file-label">
+                <span>📤 选择文件</span>
+                <input type="file" id="fileInput" accept=".xlsx,.xls">
+            </label>
+            <span id="file-status">未选择文件</span>
+            <button class="btn btn-success" id="trainBtn">🚀 训练模型</button>
+            <span id="train-status" style="margin-left:auto; font-weight:450;">待训练</span>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+            <span class="tag">特征: bet · 2-10 · 10-20 · 20-50 · &gt;50 · c值 · 比重</span>
+            <span class="tag">目标: 时耗</span>
+            <span class="tag" id="sampleCountTag">样本: 0</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 左：输入特征 -->
+        <div class="col" style="flex:1.2;">
+            <div class="card">
+                <div class="left-card-content">
+                    <h2>📥 输入特征 <small>预测新样本</small></h2>
+                    <div class="grid-7" style="grid-template-columns: repeat(auto-fill, minmax(150px,1fr));">
+                        <div class="input-group"><label>bet</label><input type="number" step="any" id="inp_bet" value="30.0"></div>
+                        <div class="input-group"><label>2-10</label><input type="number" step="any" id="inp_2_10" value="0.040"></div>
+                        <div class="input-group"><label>10-20</label><input type="number" step="any" id="inp_10_20" value="0.032"></div>
+                        <div class="input-group"><label>20-50</label><input type="number" step="any" id="inp_20_50" value="0.030"></div>
+                        <div class="input-group"><label>&gt;50</label><input type="number" step="any" id="inp_gt50" value="0.070"></div>
+                        <div class="input-group"><label>c值</label><input type="number" step="any" id="inp_c" value="55"></div>
+                    </div>
+                    <div class="ratio-action-row">
+                        <div class="input-group">
+                            <label>比重</label>
+                            <input type="number" step="any" id="inp_ratio" value="0.42">
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn" id="predictBtn">🔮 预测时耗</button>
+                            <button class="btn btn-outline" id="resetInputBtn">↺ 重置示例</button>
+                        </div>
+                    </div>
+                    <div class="result-box">
+                        <div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap; width:100%;">
+                            <div>
+                                <div style="font-weight:400; color:#23517a; font-size:0.9rem;">预测时耗：</div>
+                                <div class="result-number" id="predictionDisplay">— <small>kg</small></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右：模型评估 · 拟合散点图（理想线 + 实测/预测） -->
+        <div class="col" style="flex:1;">
+            <div class="card">
+                <div class="card-content">
+                    <h2>
+                        📊 模型评估
+                        <span class="sub-muted">(训练集留一法)</span>
+                    </h2>
+                    <div class="eval-metrics">
+                        <span class="metric-badge" id="maeDisplay">MAE： —</span>
+                        <span class="metric-badge" id="r2Display">R²： —</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <div class="flex-between">
+                            <span style="font-weight:500;">📈 实际时耗 vs 预测时耗</span>
+                            <span class="chart-title-muted" id="chartNote">需要训练后显示</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="metricsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        let rawData = [];
+        let trainedModel = null;
+        let chartInstance = null;
+
+        const fileInput = document.getElementById('fileInput');
+        const fileStatus = document.getElementById('file-status');
+        const trainBtn = document.getElementById('trainBtn');
+        const trainStatus = document.getElementById('train-status');
+        const sampleCountTag = document.getElementById('sampleCountTag');
+
+        const predictBtn = document.getElementById('predictBtn');
+        const resetBtn = document.getElementById('resetInputBtn');
+        const predictionDisplay = document.getElementById('predictionDisplay');
+        const maeDisplay = document.getElementById('maeDisplay');
+        const r2Display = document.getElementById('r2Display');
+        const chartNote = document.getElementById('chartNote');
+
+        const inp_bet = document.getElementById('inp_bet');
+        const inp_2_10 = document.getElementById('inp_2_10');
+        const inp_10_20 = document.getElementById('inp_10_20');
+        const inp_20_50 = document.getElementById('inp_20_50');
+        const inp_gt50 = document.getElementById('inp_gt50');
+        const inp_c = document.getElementById('inp_c');
+        const inp_ratio = document.getElementById('inp_ratio');
+
+        function parseExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+                        resolve(json);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = (err) => reject(err);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function extractDataFromJSON(jsonArray) {
+            const normalize = (s) => String(s).trim().toLowerCase();
+            const findKey = (obj, patternList) => {
+                const keys = Object.keys(obj);
+                for (let p of patternList) {
+                    const found = keys.find(k => normalize(k) === normalize(p));
+                    if (found) return found;
+                }
+                return null;
+            };
+
+            const rows = [];
+            for (const row of jsonArray) {
+                const betKey = findKey(row, ['bet', 'bet值']);
+                const key2_10 = findKey(row, ['2-10', '2_10']);
+                const key10_20 = findKey(row, ['10-20', '10_20']);
+                const key20_50 = findKey(row, ['20-50', '20_50']);
+                const keyGt50 = findKey(row, ['>50', '大于50']);
+                const keyC = findKey(row, ['c值', 'c']);
+                const keyRatio = findKey(row, ['比重']);
+                const keyTarget = findKey(row, ['时耗', 'time']);
+
+                if (!betKey || !key2_10 || !key10_20 || !key20_50 || !keyGt50 || !keyC || !keyRatio || !keyTarget) {
+                    continue;
+                }
+                const val = (v) => parseFloat(row[v]);
+                if ([betKey, key2_10, key10_20, key20_50, keyGt50, keyC, keyRatio, keyTarget].some(k => isNaN(val(k)))) {
+                    continue;
+                }
+                rows.push({
+                    bet: val(betKey),
+                    '2-10': val(key2_10),
+                    '10-20': val(key10_20),
+                    '20-50': val(key20_50),
+                    '>50': val(keyGt50),
+                    'c值': val(keyC),
+                    '比重': val(keyRatio),
+                    '时耗': val(keyTarget)
+                });
+            }
+            return rows;
+        }
+
+        function trainModel(dataRows) {
+            if (!dataRows || dataRows.length < 2) {
+                return { error: '数据不足，至少需要2条样本' };
+            }
+            const X = dataRows.map(r => [r.bet, r['2-10'], r['10-20'], r['20-50'], r['>50'], r['c值'], r['比重']]);
+            const y = dataRows.map(r => r['时耗']);
+
+            const n = X.length;
+            const dim = X[0].length;
+            const mins = Array(dim).fill(Infinity);
+            const maxs = Array(dim).fill(-Infinity);
+            for (let i=0; i<n; i++) {
+                for (let j=0; j<dim; j++) {
+                    if (X[i][j] < mins[j]) mins[j] = X[i][j];
+                    if (X[i][j] > maxs[j]) maxs[j] = X[i][j];
+                }
+            }
+            const ranges = maxs.map((max, j) => max - mins[j] || 1);
+
+            function normalize(vec) {
+                return vec.map((v, j) => (v - mins[j]) / ranges[j]);
+            }
+            const X_norm = X.map(row => normalize(row));
+
+            const looPred = [];
+            for (let i=0; i<n; i++) {
+                const trainX = X_norm.filter((_, idx) => idx !== i);
+                const trainY = y.filter((_, idx) => idx !== i);
+                const testVec = X_norm[i];
+
+                const dists = trainX.map((vec, idx) => {
+                    const d = Math.sqrt(vec.reduce((sum, v, j) => sum + (v - testVec[j])**2, 0));
+                    return { dist: d, label: trainY[idx] };
+                });
+                dists.sort((a,b) => a.dist - b.dist);
+                const k = Math.min(2, dists.length);
+                let sumWeight = 0, weightedSum = 0;
+                for (let t=0; t<k; t++) {
+                    const weight = 1 / (dists[t].dist + 1e-6);
+                    weightedSum += weight * dists[t].label;
+                    sumWeight += weight;
+                }
+                const pred = weightedSum / sumWeight;
+                looPred.push(pred);
+            }
+
+            const maeVal = looPred.reduce((s, pred, i) => s + Math.abs(pred - y[i]), 0) / n;
+            const meanY = y.reduce((a,b) => a+b, 0)/n;
+            const ssTot = y.reduce((s, val) => s + (val - meanY)**2, 0);
+            const ssRes = looPred.reduce((s, pred, i) => s + (pred - y[i])**2, 0);
+            const r2Val = 1 - ssRes / ssTot;
+
+            return {
+                X_norm,
+                y,
+                mins,
+                ranges,
+                looPred,
+                mae: maeVal,
+                r2: r2Val,
+                dataRows
+            };
+        }
+
+        function predictSample(model, inputVec) {
+            if (!model) return null;
+            const { X_norm, y, mins, ranges } = model;
+            const normInput = inputVec.map((v, j) => (v - mins[j]) / ranges[j]);
+            const dists = X_norm.map((vec, idx) => {
+                const d = Math.sqrt(vec.reduce((sum, v, j) => sum + (v - normInput[j])**2, 0));
+                return { dist: d, label: y[idx] };
+            });
+            dists.sort((a,b) => a.dist - b.dist);
+            const k = Math.min(2, dists.length);
+            let sumWeight = 0, weightedSum = 0;
+            for (let t=0; t<k; t++) {
+                const weight = 1 / (dists[t].dist + 1e-6);
+                weightedSum += weight * dists[t].label;
+                sumWeight += weight;
+            }
+            return weightedSum / sumWeight;
+        }
+
+        function updateChart(model) {
+            if (!model || !model.looPred || model.looPred.length === 0) {
+                chartNote.textContent = '无数据';
+                return;
+            }
+            const preds = model.looPred;
+            const actuals = model.y;
+            // 理想拟合线从 100 到 300（横坐标范围）
+            const lineData = [ { x: 100, y: 100 }, { x: 300, y: 300 } ];
+
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+
+            chartInstance = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: '实测 vs 预测',
+                            data: actuals.map((act, i) => ({ x: act, y: preds[i] })),
+                            backgroundColor: '#2b6cb0',
+                            borderColor: '#1f4a7a',
+                            borderWidth: 0,
+                            pointRadius: 6,
+                            pointHoverRadius: 9,
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 1.5,
+                            order: 1,
+                            showLine: false,
+                        },
+                        {
+                            label: '理想拟合线 (y=x)',
+                            data: lineData,
+                            type: 'line',
+                            borderColor: '#e8723a',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0,
+                            borderDash: [6, 4],
+                            order: 0,
+                            showLine: true,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                boxWidth: 14,
+                                boxHeight: 14,
+                                font: { size: 12, weight: '500' },
+                                padding: 16,
+                                usePointStyle: false,
+                            },
+                            position: 'top',
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255,255,255,0.95)',
+                            titleColor: '#1a2639',
+                            bodyColor: '#1a2639',
+                            borderColor: '#d0dce8',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 10,
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.datasetIndex === 0) {
+                                        return `实测: ${context.parsed.x.toFixed(1)}  预测: ${context.parsed.y.toFixed(1)}`;
+                                    }
+                                    return '理想拟合线';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            min: 100,
+                            max: 300,
+                            grid: {
+                                color: 'rgba(0,0,0,0.06)',
+                            },
+                            title: {
+                                display: true,
+                                text: '实测时耗 (kg)',
+                                font: { size: 12, weight: '500' },
+                                color: '#4c6a8a',
+                            },
+                            ticks: {
+                                font: { size: 11 },
+                                stepSize: 40,
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 400,
+                            grid: {
+                                color: 'rgba(0,0,0,0.06)',
+                            },
+                            title: {
+                                display: true,
+                                text: '预测时耗 (kg)',
+                                font: { size: 12, weight: '500' },
+                                color: '#4c6a8a',
+                            },
+                            ticks: {
+                                font: { size: 11 },
+                                stepSize: 50,
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 400,
+                    },
+                }
+            });
+            chartNote.textContent = `MAE=${model.mae.toFixed(2)}  R²=${model.r2.toFixed(3)}`;
+        }
+
+        function updateMetrics(model) {
+            if (!model) {
+                maeDisplay.textContent = 'MAE： —';
+                r2Display.textContent = 'R²： —';
+                return;
+            }
+            maeDisplay.textContent = `MAE： ${model.mae.toFixed(2)}`;
+            r2Display.textContent = `R²： ${model.r2.toFixed(3)}`;
+        }
+
+        async function handleTrain() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('请先选择一个 Excel 文件 (.xlsx 或 .xls)');
+                return;
+            }
+            trainBtn.disabled = true;
+            trainStatus.textContent = '⏳ 解析中...';
+            try {
+                const json = await parseExcelFile(file);
+                const dataRows = extractDataFromJSON(json);
+                if (dataRows.length === 0) {
+                    alert('未解析到有效数据。请检查列名是否包含: bet, 2-10, 10-20, 20-50, >50, c值, 比重, 时耗');
+                    trainStatus.textContent = '❌ 解析失败';
+                    trainBtn.disabled = false;
+                    return;
+                }
+                rawData = dataRows;
+                sampleCountTag.textContent = `样本: ${dataRows.length}`;
+                fileStatus.textContent = `✅ ${file.name} (${dataRows.length} 条)`;
+
+                trainStatus.textContent = '🔄 训练中 (KNN) ...';
+                const model = trainModel(dataRows);
+                if (model.error) {
+                    alert(model.error);
+                    trainStatus.textContent = '❌ 训练失败';
+                    trainBtn.disabled = false;
+                    return;
+                }
+                trainedModel = model;
+                updateMetrics(model);
+                updateChart(model);
+                trainStatus.textContent = '✅ 训练完成';
+                doPredict();
+            } catch (err) {
+                console.error(err);
+                alert('文件解析错误: ' + err.message);
+                trainStatus.textContent = '❌ 错误';
+            }
+            trainBtn.disabled = false;
+        }
+
+        function doPredict() {
+            if (!trainedModel) {
+                alert('请先训练模型 (点击 "训练模型" )');
+                return;
+            }
+            const features = [
+                parseFloat(inp_bet.value) || 0,
+                parseFloat(inp_2_10.value) || 0,
+                parseFloat(inp_10_20.value) || 0,
+                parseFloat(inp_20_50.value) || 0,
+                parseFloat(inp_gt50.value) || 0,
+                parseFloat(inp_c.value) || 0,
+                parseFloat(inp_ratio.value) || 0
+            ];
+            const pred = predictSample(trainedModel, features);
+            if (pred === null || isNaN(pred)) {
+                predictionDisplay.innerHTML = '— <small>kg</small>';
+                return;
+            }
+            predictionDisplay.innerHTML = `${pred.toFixed(2)} <small>kg</small>`;
+        }
+
+        function resetInputs() {
+            inp_bet.value = '30.0';
+            inp_2_10.value = '0.040';
+            inp_10_20.value = '0.032';
+            inp_20_50.value = '0.030';
+            inp_gt50.value = '0.070';
+            inp_c.value = '55';
+            inp_ratio.value = '0.42';
+            if (trainedModel) doPredict();
+        }
+
+        fileInput.addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                fileStatus.textContent = `📎 ${this.files[0].name}`;
+            } else {
+                fileStatus.textContent = '未选择文件';
+            }
+        });
+
+        trainBtn.addEventListener('click', handleTrain);
+        predictBtn.addEventListener('click', doPredict);
+        resetBtn.addEventListener('click', resetInputs);
+
+        // 双击标题加载内置示例 (9条数据)
+        document.querySelector('h1').addEventListener('dblclick', function() {
+            const demoData = [
+                { bet:29.275, '2-10':0.04187, '10-20':0.03471, '20-50':0.03520, '>50':0.07354, 'c值':56, '比重':0.43, '时耗':189 },
+                { bet:36.604, '2-10':0.05546, '10-20':0.03885, '20-50':0.03362, '>50':0.08193, 'c值':59, '比重':0.39, '时耗':194 },
+                { bet:26.5, '2-10':0.04141, '10-20':0.02936, '20-50':0.02595, '>50':0.07345, 'c值':59, '比重':0.38, '时耗':171 },
+                { bet:24.861, '2-10':0.03164, '10-20':0.03084, '20-50':0.04154, '>50':0.07419, 'c值':54, '比重':0.39, '时耗':227 },
+                { bet:26.561, '2-10':0.03329, '10-20':0.03035, '20-50':0.03084, '>50':0.07847, 'c值':61, '比重':0.463, '时耗':260 },
+                { bet:26.368, '2-10':0.03839, '10-20':0.02685, '20-50':0.02216, '>50':0.05864, 'c值':78, '比重':0.47, '时耗':223 },
+                { bet:27.087, '2-10':0.03866, '10-20':0.0268, '20-50':0.0258, '>50':0.05088, 'c值':60, '比重':0.415, '时耗':218 },
+                { bet:35.648, '2-10':0.04809, '10-20':0.03941, '20-50':0.03616, '>50':0.05449, 'c值':80, '比重':0.364, '时耗':208 },
+                { bet:47.098, '2-10':0.06233, '10-20':0.04868, '20-50':0.04382, '>50':0.07748, 'c值':37, '比重':0.33, '时耗':140 }
+            ];
+            rawData = demoData;
+            sampleCountTag.textContent = `样本: ${demoData.length}`;
+            fileStatus.textContent = '📋 内置示例数据 (9条)';
+            const model = trainModel(demoData);
+            if (!model.error) {
+                trainedModel = model;
+                updateMetrics(model);
+                updateChart(model);
+                trainStatus.textContent = '✅ 内置数据训练完成';
+                doPredict();
+            } else {
+                alert('内置数据训练失败');
+            }
+        });
+        console.log('💡 双击标题 "硫容时耗预测" 可加载内置示例数据');
+
+        predictionDisplay.innerHTML = '— <small>kg</small>';
+    })();
+</script>
+</body>
+</html>
